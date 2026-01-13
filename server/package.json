@@ -17,6 +17,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@google-cloud/speech": "^7.2.1",
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "multer": "^2.0.2",

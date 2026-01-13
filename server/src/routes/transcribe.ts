@@ -2,17 +2,18 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { transcribeWithWhisper } from "../whisper";
+import { normalizeAudio } from "../audio/ffmpeg";
+import { transcribeWithGoogle } from "../audio/googleSTT";
 
 const router = express.Router();
 
-const uploadDir = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
+const rawDir = path.join(process.cwd(), "uploads", "raw");
+if (!fs.existsSync(rawDir)) {
+  fs.mkdirSync(rawDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
-  destination: uploadDir,
+  destination: rawDir,
   filename: (_, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   },
@@ -20,23 +21,31 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-router.post(
-  "/transcribe",
-  upload.single("audio"),
-  async (req, res) => {
-    try {
-      const filePath = req.file!.path;
+router.post("/transcribe", upload.single("audio"), async (req, res) => {
+  let rawPath: string | null = null;
+  let wavPath: string | null = null;
 
-      const text = await transcribeWithWhisper(filePath);
-
-      fs.unlinkSync(filePath); // 🧹 delete temp file
-
-      res.json({ text });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Transcription failed" });
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
     }
+
+    rawPath = req.file.path;
+
+    // 🔥 Convert to Google-safe WAV
+    wavPath = await normalizeAudio(rawPath);
+
+    const text = await transcribeWithGoogle(wavPath);
+
+    res.json({ text });
+  } catch (err) {
+    console.error("TRANSCRIPTION ERROR:", err);
+    res.status(500).json({ error: "Transcription failed" });
+  } finally {
+    // 🧹 Cleanup
+    if (rawPath && fs.existsSync(rawPath)) fs.unlinkSync(rawPath);
+    if (wavPath && fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
   }
-);
+});
 
 export default router;
