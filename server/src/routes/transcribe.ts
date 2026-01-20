@@ -3,7 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { normalizeAudio } from "../audio/ffmpeg";
-import { transcribeWithGoogle } from "../audio/googleSTT";
+import { transcribeWithGoogle } from "../audio/sarvam";
 
 const router = express.Router();
 
