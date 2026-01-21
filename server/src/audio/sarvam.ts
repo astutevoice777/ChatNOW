@@ -1,21 +1,35 @@
 import axios from "axios";
-import FormData from "form-data";
 import fs from "fs";
+import FormData from "form-data";
+import path from "path";
 
-const SARVAM_STT_URL = "https://api.sarvam.ai/speech-to-text";
+const SARVAM_API_KEY = process.env.SARVAM_API_KEY!;
 
-export async function transcribeWithSarvam(filePath: string) {
-  const formData = new FormData();
+export async function transcribeWithSarvam(filePath: string): Promise<string> {
+  const form = new FormData();
 
-  formData.append("file", fs.createReadStream(filePath));
-  formData.append("language_code", "en-IN"); // or hi-IN, ta-IN, etc.
-
-  const response = await axios.post(SARVAM_STT_URL, formData, {
-    headers: {
-      ...formData.getHeaders(),
-      "Authorization": `Bearer ${process.env.SARVAM_API_KEY}`,
-    },
+  form.append("file", fs.createReadStream(filePath), {
+    filename: path.basename(filePath),
   });
+  form.append("language_code", "en-IN");
 
-  return response.data;
+  const response = await axios.post(
+    "https://api.sarvam.ai/speech-to-text",
+    form,
+    {
+      headers: {
+        ...form.getHeaders(),
+        "api-subscription-key": SARVAM_API_KEY,
+      },
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+    }
+  );
+
+  return (
+    response.data?.text ||
+    response.data?.transcript ||
+    response.data?.result ||
+    ""
+  );
 }

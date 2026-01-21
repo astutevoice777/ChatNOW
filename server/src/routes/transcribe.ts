@@ -2,16 +2,21 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { normalizeAudio } from "../audio/ffmpeg";
-import { transcribeWithGoogle } from "../audio/sarvam";
+import { transcribeWithSarvam } from "../audio/sarvam";
 
 const router = express.Router();
 
+/**
+ * Store raw uploads
+ */
 const rawDir = path.join(process.cwd(), "uploads", "raw");
 if (!fs.existsSync(rawDir)) {
   fs.mkdirSync(rawDir, { recursive: true });
 }
 
+/**
+ * Multer storage
+ */
 const storage = multer.diskStorage({
   destination: rawDir,
   filename: (_, file, cb) => {
@@ -19,11 +24,34 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+/**
+ * Optional: restrict audio formats Sarvam supports
+ */
+const upload = multer({
+  storage,
+  fileFilter: (_, file, cb) => {
+    const allowed = [
+      "audio/mp3",
+      "audio/mpeg", // mp3
+      "audio/wav",
+      "audio/webm",
+      "audio/ogg",
+      "audio/mp4", // m4a
+    ];
+
+    if (!allowed.includes(file.mimetype)) {
+      return cb(new Error("Unsupported audio format"));
+    }
+    cb(null, true);
+  },
+});
+
+let counter = 0;
 
 router.post("/transcribe", upload.single("audio"), async (req, res) => {
+   counter++;
+  console.log("🔁 HIT COUNT:", counter);
   let rawPath: string | null = null;
-  let wavPath: string | null = null;
 
   try {
     if (!req.file) {
@@ -32,20 +60,26 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
 
     rawPath = req.file.path;
 
-    // 🔥 Convert to Google-safe WAV
-    wavPath = await normalizeAudio(rawPath);
+    const text = await transcribeWithSarvam(rawPath);
 
-    const text = await transcribeWithGoogle(wavPath);
+    res.status(200).json({ text });
+    return;
 
-    res.json({ text });
   } catch (err) {
-    console.error("TRANSCRIPTION ERROR:", err);
-    res.status(500).json({ error: "Transcription failed" });
-  } finally {
+    console.error("SARVAM TRANSCRIPTION ERROR:", err);
+
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Transcription failed" });
+      return;
+    }
+  }
+  finally {
     // 🧹 Cleanup
-    if (rawPath && fs.existsSync(rawPath)) fs.unlinkSync(rawPath);
-    if (wavPath && fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
+    if (rawPath && fs.existsSync(rawPath)) {
+      fs.unlinkSync(rawPath);
+    }
   }
 });
+
 
 export default router;
