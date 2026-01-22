@@ -11,7 +11,9 @@ export async function transcribeWithSarvam(filePath: string): Promise<string> {
   form.append("file", fs.createReadStream(filePath), {
     filename: path.basename(filePath),
   });
-  form.append("language_code", "en-IN");
+
+  // ✅ DO NOT send language_code for multilingual audio
+  // Sarvam auto-detects languages by default
 
   const response = await axios.post(
     "https://api.sarvam.ai/speech-to-text",
@@ -23,6 +25,7 @@ export async function transcribeWithSarvam(filePath: string): Promise<string> {
       },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
+      timeout: 120_000, // optional but recommended
     }
   );
 

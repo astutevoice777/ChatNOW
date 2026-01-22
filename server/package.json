@@ -18,9 +18,12 @@
   },
   "dependencies": {
     "@google-cloud/speech": "^7.2.1",
+    "@google/genai": "^1.38.0",
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.13.2",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "gemini": "^7.5.2",
     "multer": "^2.0.2",
     "openai": "^6.16.0"
   }

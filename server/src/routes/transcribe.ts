@@ -7,20 +7,17 @@ import { transcribeWithSarvam } from "../audio/sarvam";
 import { detectSilences } from "../audio/silence";
 import { buildSpeakerTurns } from "../audio/diarize";
 import { assignTextToSpeakers } from "../audio/assignText";
+import { translateDiarizedTranscript } from "../audio/translateDiarized";
 
 const router = express.Router();
 
-/**
- * Store raw uploads
- */
+/* ---------- Upload setup ---------- */
+
 const rawDir = path.join(process.cwd(), "uploads", "raw");
 if (!fs.existsSync(rawDir)) {
   fs.mkdirSync(rawDir, { recursive: true });
 }
 
-/**
- * Multer storage
- */
 const storage = multer.diskStorage({
   destination: rawDir,
   filename: (_, file, cb) => {
@@ -28,19 +25,16 @@ const storage = multer.diskStorage({
   },
 });
 
-/**
- * Optional: restrict audio formats Sarvam supports
- */
 const upload = multer({
   storage,
   fileFilter: (_, file, cb) => {
     const allowed = [
       "audio/mp3",
-      "audio/mpeg", // mp3
+      "audio/mpeg",
       "audio/wav",
       "audio/webm",
       "audio/ogg",
-      "audio/mp4", // m4a
+      "audio/mp4",
     ];
 
     if (!allowed.includes(file.mimetype)) {
@@ -50,42 +44,7 @@ const upload = multer({
   },
 });
 
-/*
-let counter = 0;
-
-router.post("/transcribe", upload.single("audio"), async (req, res) => {
-   counter++;
-  console.log("🔁 HIT COUNT:", counter);
-  let rawPath: string | null = null;
-
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    rawPath = req.file.path;
-
-    const text = await transcribeWithSarvam(rawPath);
-
-    res.status(200).json({ text });
-    return;
-
-  } catch (err) {
-    console.error("SARVAM TRANSCRIPTION ERROR:", err);
-
-    if (!res.headersSent) {
-      res.status(500).json({ error: "Transcription failed" });
-      return;
-    }
-  }
-  finally {
-    // 🧹 Cleanup
-    if (rawPath && fs.existsSync(rawPath)) {
-      fs.unlinkSync(rawPath);
-    }
-  }
-});
-*/
+/* ---------- Route ---------- */
 
 router.post("/transcribe", upload.single("audio"), async (req, res) => {
   let rawPath: string | null = null;
@@ -97,10 +56,10 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
 
     rawPath = req.file.path;
 
-    // 1️⃣ Detect pauses
+    /* 1️⃣ Detect pauses */
     const { silences, duration } = await detectSilences(rawPath);
 
-    // 2️⃣ Transcribe text
+    /* 2️⃣ Transcribe (mixed language) */
     const transcript = await transcribeWithSarvam(rawPath);
 
     const text =
@@ -108,27 +67,27 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
         ? transcript
         : transcript.text ?? "";
 
-    // 3️⃣ Build speaker turns
+    /* 3️⃣ Speaker turns */
     const turns = buildSpeakerTurns(silences, duration);
 
-    // 4️⃣ Assign text
+    /* 4️⃣ Assign text */
     const diarized = assignTextToSpeakers(text, turns);
 
+    /* 5️⃣ Translate to English */
+    const translated = await translateDiarizedTranscript(diarized);
+
     return res.json({
-      transcript: diarized
+      transcript: translated
     });
 
   } catch (err) {
     console.error("DIARIZATION ERROR:", err);
     return res.status(500).json({ error: "Transcription failed" });
-  }
-  finally {
-    // 🧹 Cleanup
+  } finally {
     if (rawPath && fs.existsSync(rawPath)) {
       fs.unlinkSync(rawPath);
     }
   }
 });
-
 
 export default router;
