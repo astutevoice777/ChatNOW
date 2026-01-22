@@ -2,7 +2,11 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+
 import { transcribeWithSarvam } from "../audio/sarvam";
+import { detectSilences } from "../audio/silence";
+import { buildSpeakerTurns } from "../audio/diarize";
+import { assignTextToSpeakers } from "../audio/assignText";
 
 const router = express.Router();
 
@@ -46,6 +50,7 @@ const upload = multer({
   },
 });
 
+/*
 let counter = 0;
 
 router.post("/transcribe", upload.single("audio"), async (req, res) => {
@@ -72,6 +77,50 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
       res.status(500).json({ error: "Transcription failed" });
       return;
     }
+  }
+  finally {
+    // 🧹 Cleanup
+    if (rawPath && fs.existsSync(rawPath)) {
+      fs.unlinkSync(rawPath);
+    }
+  }
+});
+*/
+
+router.post("/transcribe", upload.single("audio"), async (req, res) => {
+  let rawPath: string | null = null;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    rawPath = req.file.path;
+
+    // 1️⃣ Detect pauses
+    const { silences, duration } = await detectSilences(rawPath);
+
+    // 2️⃣ Transcribe text
+    const transcript = await transcribeWithSarvam(rawPath);
+
+    const text =
+      typeof transcript === "string"
+        ? transcript
+        : transcript.text ?? "";
+
+    // 3️⃣ Build speaker turns
+    const turns = buildSpeakerTurns(silences, duration);
+
+    // 4️⃣ Assign text
+    const diarized = assignTextToSpeakers(text, turns);
+
+    return res.json({
+      transcript: diarized
+    });
+
+  } catch (err) {
+    console.error("DIARIZATION ERROR:", err);
+    return res.status(500).json({ error: "Transcription failed" });
   }
   finally {
     // 🧹 Cleanup
