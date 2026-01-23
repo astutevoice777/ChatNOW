@@ -8,6 +8,7 @@ import { detectSilences } from "../audio/silence";
 import { buildSpeakerTurns } from "../audio/diarize";
 import { assignTextToSpeakers } from "../audio/assignText";
 import { translateDiarizedTranscript } from "../audio/translateDiarized";
+import { summary } from "../audio/minutes";
 
 const router = express.Router();
 
@@ -76,8 +77,11 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
     /* 5️⃣ Translate to English */
     const translated = await translateDiarizedTranscript(diarized);
 
+    const meeting_summary = await summary(diarized);
+
     return res.json({
-      transcript: translated
+      transcript: translated, 
+      mom : meeting_summary
     });
 
   } catch (err) {

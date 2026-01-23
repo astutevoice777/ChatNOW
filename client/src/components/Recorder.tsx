@@ -1,6 +1,8 @@
 import { useRecorder } from "../hooks/useRecorder";
 import { sendRecording } from "../api/transcribe";
 import { useState } from "react";
+import TranscriptDisplay from "./TranscriptDisplay";
+import MoMDisplay from "./MoMDisplay";
 
 export default function Recorder() {
   const { startRecording, stopRecording, recording } = useRecorder();
@@ -36,8 +38,8 @@ export default function Recorder() {
         {recording
           ? "Recording in progress…"
           : loading
-          ? "Processing audio…"
-          : "Click to start recording"}
+            ? "Processing audio…"
+            : "Click to start recording"}
       </p>
 
       {/* Record Button */}
@@ -76,15 +78,22 @@ export default function Recorder() {
 
       {/* Result */}
       {result && (
+        <>
         <div className="mt-6">
           <h3 className="text-sm font-medium text-gray-700 mb-2">
             Transcription Output
           </h3>
 
-          <div className="bg-gray-50 border rounded-lg p-4 max-h-64 overflow-y-auto text-sm text-gray-800 whitespace-pre-wrap">
-            {JSON.stringify(result, null, 2)}
-          </div>
+          <TranscriptDisplay transcript={result.transcript} />
         </div>
+        <div className="mt-6">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            Minutes of the Meeting - 
+          </h3>
+
+        <MoMDisplay mom={result.mom} />
+        </div>
+        </>
       )}
     </div>
   );
