@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import router from "./routes/transcribe";
+import search_router from "./routes/semanticSearch";
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use(
 );
 
 app.use(router);
+app.use(search_router);
 
 app.listen(3003, () => {
   console.log("Server running on http://localhost:3003");

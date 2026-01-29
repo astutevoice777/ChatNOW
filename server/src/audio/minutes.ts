@@ -40,7 +40,7 @@ Generate clear and structured Minutes of Meeting (MoM).
 Include:
 - Key discussion points
 - Decisions made
-- Action items with owners (if identifiable)
+- Action items, dont include owners
 - Important follow-ups
 Make it in english.
 `
