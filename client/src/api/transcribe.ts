@@ -1,4 +1,5 @@
 import axios from "axios";
+import { API_BASE_URL } from "../config";
 
 export async function sendRecording(blob: Blob) {
   const formData = new FormData();
@@ -6,7 +7,7 @@ export async function sendRecording(blob: Blob) {
   formData.append("audio", blob, "recording.webm");
 
   const res = await axios.post(
-    "http://localhost:3003/transcribe",
+    `${API_BASE_URL}/transcribe`,
     formData,
     {
       headers: {

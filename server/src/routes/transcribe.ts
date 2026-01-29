@@ -9,6 +9,8 @@ import { buildSpeakerTurns } from "../audio/diarize";
 import { assignTextToSpeakers } from "../audio/assignText";
 import { translateDiarizedTranscript } from "../audio/translateDiarized";
 import { summary } from "../audio/minutes";
+import { embedText } from "../embeddings";
+import { db } from "../db";
 
 const router = express.Router();
 
@@ -78,6 +80,17 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
     const translated = await translateDiarizedTranscript(diarized);
 
     const meeting_summary = await summary(diarized);
+
+    /* 6️⃣ Embed & Store */
+    console.log("Generating embedding for summary...");
+    const vector = await embedText(meeting_summary);
+
+    const meetingId = `meeting-${Date.now()}`;
+    await db.query(
+        "INSERT INTO meeting_minutes (meeting_id, minutes, embedding) VALUES ($1, $2, $3)",
+        [meetingId, meeting_summary, `[${vector.join(",")}]`]
+    );
+    console.log("Stored meeting minutes and embedding for", meetingId);
 
     return res.json({
       transcript: translated, 

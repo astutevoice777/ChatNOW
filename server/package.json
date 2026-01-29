@@ -11,7 +11,8 @@
     "@types/bun": "latest",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/multer": "^2.0.0"
+    "@types/multer": "^2.0.0",
+    "@types/pg": "^8.16.0"
   },
   "peerDependencies": {
     "typescript": "^5"
