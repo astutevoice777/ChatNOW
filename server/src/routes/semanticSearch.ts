@@ -23,13 +23,13 @@ search_router.post("/semantic-search", async (req, res) => {
     const { rows } = await db.query(
       `
       SELECT meeting_id,
-             minutes,
-             embedding <-> $1 AS distance
+         minutes,
+         embedding <-> $1::vector AS distance
       FROM meeting_minutes
       ORDER BY distance
       LIMIT 3;
       `,
-      [queryEmbedding]
+      [JSON.stringify(queryEmbedding)]
     );
 
     res.json({

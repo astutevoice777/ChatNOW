@@ -86,11 +86,17 @@ router.post("/transcribe", upload.single("audio"), async (req, res) => {
     const vector = await embedText(meeting_summary);
 
     const meetingId = `meeting-${Date.now()}`;
+    const pressedAt = req.body.pressedAt
+    ? new Date(Number(req.body.pressedAt))
+    : new Date();
+    console.log(pressedAt);
+
     await db.query(
-        "INSERT INTO meeting_minutes (meeting_id, minutes, embedding) VALUES ($1, $2, $3)",
-        [meetingId, meeting_summary, `[${vector.join(",")}]`]
+        "INSERT INTO meeting_minutes (meeting_id, minutes, embedding, created_at) VALUES ($1, $2, $3, $4)",
+        [meetingId, meeting_summary, `[${vector.join(",")}]`, pressedAt]
     );
     console.log("Stored meeting minutes and embedding for", meetingId);
+    console.log(pressedAt);
 
     return res.json({
       transcript: translated, 

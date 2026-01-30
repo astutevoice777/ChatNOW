@@ -41,9 +41,15 @@ export default function Recorder() {
       setSearchLoading(true);
       setError(null);
 
+      const pressedAt = Date.now(); // ms since epoch
+
+console.log(pressedAt);
+
       const res = await axios.post(
         `${API_BASE_URL}/semantic-search`,
-        { query: searchQuery }
+        { query: searchQuery, 
+          pressedAt
+         }
       );
 
       setSearchResults(res.data.results); // ✅ axios way
